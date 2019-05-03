@@ -1,21 +1,14 @@
 import xlsxwriter
-import math
 import os
 from decimal import Decimal
 import lib.constants as constant
+from .xml_parser import build_path_for_files
 
 
-CUSTOM_COLUMNS = [
-    'fn_uncov',
-    'cd_cov_d_cov',
-    'cd_uncov_d_uncov',
-]
-
-
-def build_xlsx_file(filename, data):
+def build_xlsx_file(filename, data, child_to_parent_map):
     workbook = xlsxwriter.Workbook(os.path.abspath(filename))
 
-    overall(data, workbook)
+    overall(data, workbook, child_to_parent_map)
 
     for raw_data_for_sheet in data:
         sheet = workbook.add_worksheet(get_sheet_name(raw_data_for_sheet))
@@ -28,42 +21,37 @@ def get_sheet_name(sheet_data):
 
 
 def fill_sheet(raw_data, sheet):
-    sheet.write(0, 0, "file name")
-    # sheet.write(0, 1, "function names")
+    sheet.write(constant.FILENAME_HEADER_CELL, "file name")
 
     filename_column_index = 0
-    filename_column = "A:A"
-    function_name_column = "B:B"
 
     name_func_column = 1
-    func_column_index = name_func_column + 1
     filename_row = 2
     func_row = filename_row + 1
 
     for header in constant.COLUMN_INDEXES.keys():
         sheet.write(0, constant.COLUMN_INDEXES.get(header), header)
         if header == 'cd_cov_d_cov' or header == 'cd_uncov_d_uncov':
-            sheet.set_column(constant.COLUMN_INDEXES.get(header), 30)
+            column_index = constant.COLUMN_INDEXES.get(header)
+            sheet.set_column(column_index, column_index, 15)
 
     func_column_index = name_func_column + 1
 
     filename_column_width = 0
     function_name_column_width = 0
 
-    for file in raw_data.get('files'):
-        filename = file.get('info').get('name')
+    for file in raw_data.get(constant.CUSTOM_XML_FIELDS.get('FILES')):
+        filename = file.get(constant.CUSTOM_XML_FIELDS.get('INFO')).get(constant.XML_ATTRIBUTES.get('NAME'))
 
-        if filename.endswith('.h'):
+        if filename.endswith(constant.HEADER_EXTENTION):
             continue
 
-        if len(filename) > filename_column_width:
-            filename_column_width = len(filename)
+        filename_column_width = set_name_field_length(filename, filename_column_width)
 
         sheet.write(filename_row, filename_column_index, filename)
-        for func in file.get('functions'):
-            function_name = func.get('name')
-            if len(function_name) > function_name_column_width:
-                function_name_column_width = len(function_name)
+        for func in file.get(constant.CUSTOM_XML_FIELDS.get('FUNCTIONS')):
+            function_name = func.get(constant.XML_ATTRIBUTES.get('NAME'))
+            function_name_column_width = set_name_field_length(function_name, function_name_column_width)
 
             for attrName in constant.COLUMN_INDEXES.keys():
                 strategy(sheet, func_row, func, attrName)
@@ -72,32 +60,33 @@ def fill_sheet(raw_data, sheet):
             func_row += 1
             func_column_index = name_func_column + 1
 
-        filename_row += len(file.get('functions')) + 1
+        filename_row += len(file.get(constant.CUSTOM_XML_FIELDS.get('FUNCTIONS'))) + 1
         func_row = filename_row + 1
 
-    sheet.set_column(filename_column, filename_column_width)
-    sheet.set_column(function_name_column, function_name_column_width)
+    sheet.set_column(constant.NAME_COLUMN, filename_column_width)
+    sheet.set_column(constant.FUNCTION_NAME_COLUMN, function_name_column_width)
 
 
-def overall(data, workbook):
+def overall(folders, workbook, child_to_parent_map):
     overall_sheet = workbook.add_worksheet('Overall')
-    name_column = "A:A"
 
     for header in constant.COLUMN_INDEXES.keys():
         overall_sheet.write(0, constant.COLUMN_INDEXES.get(header) - 1, header)
         if header == 'cd_cov_d_cov' or header == 'cd_uncov_d_uncov':
-            overall_sheet.set_column(constant.COLUMN_INDEXES.get(header) - 1, 30)
+            column_index = constant.COLUMN_INDEXES.get(header) - 1
+            overall_sheet.set_column(column_index, column_index, 15)
 
     row = 1
     filename_field_len = 0
-    for folder in data:
-        for file in folder.get('files'):
-            file_info = file.get('info')
-            filename = file_info.get('name')
-            if len(filename) > filename_field_len:
-                filename_field_len = len(filename)
+    for folder in folders:
 
-            if filename.endswith('.h'):
+        for file in folder.get(constant.CUSTOM_XML_FIELDS.get('FILES')):
+            # path = build_path_for_files(file, child_to_parent_map)
+            file_info = file.get(constant.CUSTOM_XML_FIELDS.get('INFO'))
+            filename = file_info.get(constant.XML_ATTRIBUTES.get('NAME'))
+            filename_field_len = set_name_field_length(filename, filename_field_len)
+
+            if filename.endswith(constant.HEADER_EXTENTION):
                 continue
 
             for attrName in constant.COLUMN_INDEXES.keys():
@@ -105,7 +94,14 @@ def overall(data, workbook):
 
             row += 1
 
-    overall_sheet.set_column(name_column, filename_field_len)
+    overall_sheet.set_column(constant.NAME_COLUMN, filename_field_len)
+
+
+def set_name_field_length(name, prev_length):
+    if len(name) > prev_length:
+        return len(name)
+    else:
+        return prev_length
 
 
 def percentize(raw_result, attr):
