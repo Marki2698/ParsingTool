@@ -2,13 +2,12 @@ import xlsxwriter
 import os
 from decimal import Decimal
 import lib.constants as constant
-from .xml_parser import build_path_for_files
 
 
-def build_xlsx_file(filename, data, child_to_parent_map):
+def build_xlsx_file(filename, data):
     workbook = xlsxwriter.Workbook(os.path.abspath(filename))
 
-    overall(data, workbook, child_to_parent_map)
+    overall(data, workbook)
 
     for raw_data_for_sheet in data:
         sheet = workbook.add_worksheet(get_sheet_name(raw_data_for_sheet))
@@ -21,7 +20,7 @@ def get_sheet_name(sheet_data):
 
 
 def fill_sheet(raw_data, sheet):
-    sheet.write(constant.FILENAME_HEADER_CELL, "file name")
+    sheet.write(constant.FILENAME_HEADER_CELL, 'file name')
 
     filename_column_index = 0
 
@@ -46,15 +45,15 @@ def fill_sheet(raw_data, sheet):
         if filename.endswith(constant.HEADER_EXTENTION):
             continue
 
-        filename_column_width = set_name_field_length(filename, filename_column_width)
+        filename_column_width = set_field_length(filename, filename_column_width)
 
         sheet.write(filename_row, filename_column_index, filename)
         for func in file.get(constant.CUSTOM_XML_FIELDS.get('FUNCTIONS')):
             function_name = func.get(constant.XML_ATTRIBUTES.get('NAME'))
-            function_name_column_width = set_name_field_length(function_name, function_name_column_width)
+            function_name_column_width = set_field_length(function_name, function_name_column_width)
 
             for attrName in constant.COLUMN_INDEXES.keys():
-                strategy(sheet, func_row, func, attrName)
+                sheet_filler(sheet, func_row, func, attrName)
                 func_column_index += 1
 
             func_row += 1
@@ -67,7 +66,7 @@ def fill_sheet(raw_data, sheet):
     sheet.set_column(constant.FUNCTION_NAME_COLUMN, function_name_column_width)
 
 
-def overall(folders, workbook, child_to_parent_map):
+def overall(folders, workbook):
     overall_sheet = workbook.add_worksheet('Overall')
 
     for header in constant.COLUMN_INDEXES.keys():
@@ -78,26 +77,34 @@ def overall(folders, workbook, child_to_parent_map):
 
     row = 1
     filename_field_len = 0
+    file_path_field_len = 0
     for folder in folders:
 
         for file in folder.get(constant.CUSTOM_XML_FIELDS.get('FILES')):
-            # path = build_path_for_files(file, child_to_parent_map)
             file_info = file.get(constant.CUSTOM_XML_FIELDS.get('INFO'))
             filename = file_info.get(constant.XML_ATTRIBUTES.get('NAME'))
-            filename_field_len = set_name_field_length(filename, filename_field_len)
+
+            filename_field_len = set_field_length(filename, filename_field_len)
 
             if filename.endswith(constant.HEADER_EXTENTION):
                 continue
 
+            file_path = file.get(constant.CUSTOM_XML_FIELDS.get('FILE_PATH'))
+            file_path_field_len = set_field_length(file_path, file_path_field_len)
+
             for attrName in constant.COLUMN_INDEXES.keys():
-                strategy(overall_sheet, row, file_info, attrName, True)
+                if attrName == 'path':
+                    sheet_filler(overall_sheet, row, file, attrName, True)
+                else:
+                    sheet_filler(overall_sheet, row, file_info, attrName, True)
 
             row += 1
 
     overall_sheet.set_column(constant.NAME_COLUMN, filename_field_len)
+    overall_sheet.set_column(constant.FILE_PATH_COLUMN, file_path_field_len)
 
 
-def set_name_field_length(name, prev_length):
+def set_field_length(name, prev_length):
     if len(name) > prev_length:
         return len(name)
     else:
@@ -106,7 +113,7 @@ def set_name_field_length(name, prev_length):
 
 def percentize(raw_result, attr):
     if attr in constant.FIELDS_TO_PERCENTIZE:
-        return "{} %".format(raw_result)
+        return '{} %'.format(raw_result)
     else:
         return raw_result
 
@@ -123,7 +130,7 @@ def calc_result(a, b):
     return result
 
 
-def strategy(sheet, row, func_or_file_info, attr, is_file=False):
+def sheet_filler(sheet, row, func_or_file_info, attr, is_file=False):
 
     if attr in constant.EXCLUDE_FIELDS:
         return

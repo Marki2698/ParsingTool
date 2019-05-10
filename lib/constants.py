@@ -21,7 +21,7 @@ CUSTOM_XML_FIELDS = {
     'PROBES': 'probes',
     'FUNCTIONS': 'functions',
     'INFO': 'info',
-
+    'FILE_PATH': 'path',
 }
 
 COLUMN_INDEXES = {
@@ -32,16 +32,16 @@ COLUMN_INDEXES = {
     'cd_cov_d_cov': 5,
     'cd_uncov_d_uncov': 6,
     'cd_total': 7,
-    'd_total': 8
+    'd_total': 8,
+    'path': 9
 }
 
 FIELDS_TO_PERCENTIZE = ['fn_cov', 'cd_cov_d_cov']
 
 EXCLUDE_FIELDS = ['d_cov', 'cd_cov', ]
 
-NAME_COLUMN = "A:A"
-FILENAME_HEADER_CELL = "A1"
-FUNCTION_NAME_COLUMN = "B:B"
-UNCOVERED_FUNCTIONS_COLUMN = "I:I"
-UNCOVERED_DECISIONS_CONDITIONS_COLUMN = "F:F"
-HEADER_EXTENTION = ".h"
+NAME_COLUMN = 'A:A'
+FILENAME_HEADER_CELL = 'A1'
+FUNCTION_NAME_COLUMN = 'B:B'
+FILE_PATH_COLUMN = 'I:I'
+HEADER_EXTENTION = '.h'

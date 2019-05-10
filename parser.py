@@ -15,4 +15,4 @@ tree = ET.parse(xml_path)
 root = tree.getroot()
 child_to_parent_map = {child: parent for parent in root.iter() for child in parent}
 stats = get_stats(root, child_to_parent_map)
-build_xlsx_file(xlsx_path, stats, child_to_parent_map)
+build_xlsx_file(xlsx_path, stats)

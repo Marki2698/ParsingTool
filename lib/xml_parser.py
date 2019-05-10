@@ -3,9 +3,9 @@ import lib.constants as constant
 list_of_folders_with_functions = []
 
 
-def dig(xml_elem, parent_map):
+def dig(xml_elem, parent_map, file_path=''):
     children = xml_elem.getchildren()
-    sheet = {}  # TODO: rename variable
+    sheet = {}
     folder = {}
 
     for attr in xml_elem.attrib:
@@ -24,11 +24,13 @@ def dig(xml_elem, parent_map):
 
     for child in children:
         if constant.XML_FIELDS.get('FOLDER') in child.tag:
-            dig(child, parent_map)
+            path = file_path + '/' + child.get(constant.XML_ATTRIBUTES.get('NAME'))
+            dig(child, parent_map, path)
         else:
             if constant.XML_FIELDS.get('SRC') in child.tag:
                 file = {
-                    'info': parse_file_info_from_xml(child)
+                    'info': parse_file_info_from_xml(child),
+                    'path': file_path
                 }
 
                 functions_in_file = []
@@ -78,47 +80,3 @@ def get_stats(xml_elem, child_to_parent_map):
     dig(xml_elem, child_to_parent_map)
 
     return list_of_folders_with_functions
-
-
-def rec(xml_elem, parent_map):
-    print(xml_elem.get('info').get('name'))
-    path = ''
-    current_elem = xml_elem
-    keep_going = True
-    while keep_going:
-        if current_elem is None:
-            keep_going = False
-        else:
-            for key in parent_map.keys():
-                if hasattr(key, 'name'):
-                    key_name = key.get('name')
-                else:
-                    key_name = key.get('info').get('name')
-
-                if hasattr(current_elem, 'name'):
-                    current_name = current_elem.get('name')
-                else:
-                    current_name = current_elem.get('info').get('name')
-
-                if key_name == current_name:
-                    parent = parent_map.get(key)
-                    if parent is None:
-                        keep_going = False
-                    else:
-
-                        if hasattr(parent, 'name'):
-                            parent_name = parent.get('name')
-                        else:
-                            parent_name = parent.get('info').get('name')
-
-                        path += '/' + parent_name
-                        current_elem = parent
-    print(path)
-    return path
-
-
-def build_path_for_files(file, child_to_parent_map):
-    file_info = file.get(constant.CUSTOM_XML_FIELDS.get('INFO'))
-    filename = file_info.get(constant.XML_ATTRIBUTES.get('NAME'))
-    path = rec(file, child_to_parent_map)
-    return path
